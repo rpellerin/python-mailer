@@ -11,29 +11,26 @@ from datetime import datetime
 from email import message
 from time import sleep
 
-import config
+import config # Our file config.py
 
 # setup logging to specified log file
 logging.basicConfig(filename=config.LOG_FILENAME, level=logging.DEBUG)
 
-
 class PyMailer():
     """
-    A python bulk mailer commandline utility. Takes five arguments: the path to the html file to be parsed; the
-    database of recipients (.csv); the subject of the email; email adsress the mail comes from; and the name the email
-    is from.
+    A python bulk mailer commandline utility. Takes six arguments: the path to the html file to be parsed; the database of recipients (.csv); the subject of the email; email address the mail comes from; the name the email is from; the number of emails to send to each recipient.
     """
     def __init__(self, html_path, csv_path, subject, *args, **kwargs):
-        self.html_path = html_path
-        self.csv_path = csv_path
-        self.subject = subject
-        self.from_name = kwargs.get('from_name', config.FROM_NAME)
-        self.from_email = kwargs.get('to_name', config.FROM_EMAIL)
+        self.html_path               = html_path
+        self.csv_path                = csv_path
+        self.subject                 = subject
+        self.from_name               = kwargs.get('from_name', config.FROM_NAME)
+        self.from_email              = kwargs.get('to_name', config.FROM_EMAIL)
+        self.nb_emails_per_recipient = kwargs.get('nb_emails_per_recipient', config.NB_EMAILS_PER_RECIPIENT)
 
     def _stats(self, message):
         """
-        Update stats log with: last recipient (incase the server crashes); datetime started; datetime ended; total
-        number of recipients attempted; number of failed recipients; and database used.
+        Update stats log with: last recipient (in case the server crashes); datetime started; datetime ended; total number of recipients attempted; number of failed recipients; and database used.
         """
         try:
             stats_file = open(config.STATS_FILE, 'r')
@@ -154,7 +151,7 @@ class PyMailer():
                 recipient_name = ''
                 recipient_email = None
 
-            print recipient_name, recipient_email
+            # print recipient_name, recipient_email
 
             # log missing email addresses and line number
             if not recipient_email:
@@ -177,6 +174,9 @@ class PyMailer():
         """
         Iterate over the recipient list and send the specified email.
         """
+        if config.ENCRYPT_MODE != 'none' and config.ENCRYPT_MODE != 'ssl' and config.ENCRYPT_MODE != 'starttls':
+            raise Exception("Please choose a correct ENCRYPT_MODE")
+
         if not recipient_list:
             recipient_list = self._parse_csv()
             if retry_count:
@@ -199,23 +199,41 @@ class PyMailer():
                 recipient = recipient_data.get('email')
             sender = "%s <%s>" % (self.from_name, self.from_email)
 
-            # send the actual email
-            smtp_server = smtplib.SMTP(host=config.SMTP_HOST, port=config.SMTP_PORT)
-            try:
-                smtp_server.sendmail(sender, recipient, message)
+            for nb in range(0,self.nb_emails_per_recipient):
+                print "Sending to %s..." % recipient
+                try:
+                    # send the actual email
+                    
+                    if config.ENCRYPT_MODE == 'ssl':
+                        smtp_server = smtplib.SMTP_SSL(host=config.SMTP_HOST, port=config.SMTP_PORT, timeout=10)
+                    else:
+                        smtp_server = smtplib.SMTP(host=config.SMTP_HOST, port=config.SMTP_PORT, timeout=10)
 
-                # save the last recipient to the stats file incase the process fails
-                self._stats("LAST RECIPIENT: %s" % recipient)
+                    if config.ENCRYPT_MODE != 'none':
+                        smtp_server.ehlo()
+                        if config.ENCRYPT_MODE == 'starttls':
+                            smtp_server.starttls()
+                            smtp_server.ehlo()
 
-                # allow the system to sleep for .25 secs to take load off the SMTP server
-                sleep(0.25)
-            except:
-                logging.error("Recipient email address failed: %s" % recipient)
-                self._retry_handler(recipient_data)
+                    if config.SMTP_USER and config.SMTP_PASSWORD:
+                        smtp_server.login(config.SMTP_USER, config.SMTP_PASSWORD)
 
-                # save the number of failed recipients to the stats file
-                failed_recipients = failed_recipients + 1
-                self._stats("FAILED RECIPIENTS: %s" % failed_recipients)
+                    smtp_server.sendmail(sender, recipient, message)
+                    smtp_server.close()
+                    # save the last recipient to the stats file incase the process fails
+                    self._stats("LAST RECIPIENT: %s" % recipient)
+
+                    # allow the system to sleep for .25 secs to take load off the SMTP server
+                    sleep(0.25)
+                except smtplib.SMTPException as e:
+                    print "EXCEPTION"
+                    print repr(e);
+                    logging.error("Recipient email address failed: %s\n=== Exception ===\n%s" % (recipient, repr(e)))
+                    self._retry_handler(recipient_data)
+
+                    # save the number of failed recipients to the stats file
+                    failed_recipients = failed_recipients + 1
+                    self._stats("FAILED RECIPIENTS: %s" % failed_recipients)
 
     def send_test(self):
         self.send(recipient_list=config.TEST_RECIPIENTS)
@@ -230,10 +248,8 @@ class PyMailer():
     def count_recipients(self, csv_path=None):
         return len(self._parse_csv(csv_path))
 
-
 def main(sys_args):
-    if not os.path.exists(config.CSV_RETRY_FILENAME):
-        open(config.CSV_RETRY_FILENAME, 'wb').close()
+    open(config.CSV_RETRY_FILENAME, 'wb').close() # Creates a new one or overwrite the old one
 
     if not os.path.exists(config.STATS_FILE):
         open(config.STATS_FILE, 'wb').close()
@@ -253,7 +269,7 @@ def main(sys_args):
         sys.exit()
 
     pymailer = PyMailer(html_path, csv_path, subject)
-
+    
     if action == '-s':
         if raw_input("You are about to send to %s recipients. Do you want to continue (yes/no)? " % pymailer.count_recipients()) == 'yes':
             # save the csv file used to the stats file
@@ -274,7 +290,7 @@ def main(sys_args):
             sys.exit()
 
     else:
-        print "%s option is not support. Use either [-s] to send to all recipients or [-t] to send to test recipients" % action
+        print "%s option is not supported. Use either [-s] to send to all recipients or [-t] to send to test recipients" % action
 
     # save the end time to the stats file
     pymailer._stats("END TIME: %s" % datetime.now())
