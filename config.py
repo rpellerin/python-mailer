@@ -4,11 +4,12 @@ retry files have the correct permissions.
 """
 
 from datetime import datetime
+import tempfile
 
 # file settings
-LOG_FILENAME        = '/tmp/pymailer.log'
-CSV_RETRY_FILENAME  = '/tmp/pymailer.csv'
-STATS_FILE          = '/tmp/pymailer-%s.stat' % str(datetime.now()).replace(' ', '-').replace(':', '-').replace('.', '-')
+LOG_FILENAME        = tempfile.gettempdir()+'/pymailer.log'
+CSV_RETRY_FILENAME  = tempfile.gettempdir()+'/pymailer.csv'
+STATS_FILE          = tempfile.gettempdir()+'/pymailer-%s.stat' % str(datetime.now()).replace(' ', '-').replace(':', '-').replace('.', '-')
 
 # smtp settings
 SMTP_HOST     = ''
