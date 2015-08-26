@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import csv
 import logging
@@ -63,7 +63,7 @@ class PyMailer():
         Validate the supplied email address.
         """
         if not email_address or len(email_address) < 5:
-            print 1
+            print(1)
             return None
         if not re.match(r'^[a-zA-Z0-9._%-+]+@[a-zA-Z0-9._%-]+.[a-zA-Z]{2,6}$', email_address):
             return None
@@ -89,7 +89,7 @@ class PyMailer():
         Open, parse and substitute placeholders with recipient data.
         """
         try:
-            html_file = open(self.html_path, 'rb')
+            html_file = open(self.html_path, 'rt')
         except IOError:
             raise IOError("Invalid or missing html file path.")
 
@@ -136,7 +136,7 @@ class PyMailer():
             csv_path = self.csv_path
 
         try:
-            csv_file = open(csv_path, 'rwb')
+            csv_file = open(csv_path, 'r+t')
         except IOError:
             raise IOError("Invalid or missing csv file path.")
 
@@ -200,7 +200,7 @@ class PyMailer():
             sender = "%s <%s>" % (self.from_name, self.from_email)
 
             for nb in range(0,self.nb_emails_per_recipient):
-                print "Sending to %s..." % recipient
+                print("Sending to %s..." % recipient)
                 try:
                     # send the actual email
                     
@@ -226,8 +226,8 @@ class PyMailer():
                     # allow the system to sleep for .25 secs to take load off the SMTP server
                     sleep(0.25)
                 except smtplib.SMTPException as e:
-                    print "EXCEPTION"
-                    print repr(e);
+                    print("EXCEPTION")
+                    print(repr(e))
                     logging.error("Recipient email address failed: %s\n=== Exception ===\n%s" % (recipient, repr(e)))
                     self._retry_handler(recipient_data)
 
@@ -257,15 +257,15 @@ def main(sys_args):
     try:
         action, html_path, csv_path, subject = sys_args
     except ValueError:
-        print "Not enough argumants supplied. PyMailer requests 1 option and 3 arguments: ./pymailer -s html_path csv_path subject"
+        print("Not enough argumants supplied. PyMailer requests 1 option and 3 arguments: ./pymailer -s html_path csv_path subject")
         sys.exit()
 
     if os.path.splitext(html_path)[1] != '.html':
-        print "The html_path argument doesn't seem to contain a valid html file."
+        print("The html_path argument doesn't seem to contain a valid html file.")
         sys.exit()
 
     if os.path.splitext(csv_path)[1] != '.csv':
-        print "The csv_path argument doesn't seem to contain a valid csv file."
+        print("The csv_path argument doesn't seem to contain a valid csv file.")
         sys.exit()
 
     pymailer = PyMailer(html_path, csv_path, subject)
@@ -279,18 +279,18 @@ def main(sys_args):
             pymailer.send()
             pymailer.resend_failed()
         else:
-            print "Aborted."
+            print("Aborted.")
             sys.exit()
 
     elif action == '-t':
         if raw_input("You are about to send a test mail to all recipients as specified in config.py. Do you want to continue (yes/no)? ") == 'yes':
             pymailer.send_test()
         else:
-            print "Aborted."
+            print("Aborted.")
             sys.exit()
 
     else:
-        print "%s option is not supported. Use either [-s] to send to all recipients or [-t] to send to test recipients" % action
+        print("%s option is not supported. Use either [-s] to send to all recipients or [-t] to send to test recipients" % action)
 
     # save the end time to the stats file
     pymailer._stats("END TIME: %s" % datetime.now())
