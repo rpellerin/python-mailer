@@ -8,7 +8,7 @@ In order for this script to work, move it to the root folder of this repo.
 mv scripts/script-pc-turned-on.py ./
 ```
 
-Then, in `/etc/rc.local`:
+Then, in `/etc/rc.local`, add the following right above `exit 0`:
 
 ```bash
 su - someuser -c /whatever/commandline.sh &
