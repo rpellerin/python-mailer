@@ -74,7 +74,7 @@ class PyMailer():
         Write failed recipient_data to csv file to be retried again later.
         """
         try:
-            csv_file = open(config.CSV_RETRY_FILENAME, 'wb+')
+            csv_file = open(config.CSV_RETRY_FILENAME, 'w+', newline='')
         except IOError:
             raise IOError("Invalid or missing csv file path.")
         csv_writer = csv.writer(csv_file)
@@ -249,10 +249,10 @@ class PyMailer():
         return len(self._parse_csv(csv_path))
 
 def main(sys_args):
-    open(config.CSV_RETRY_FILENAME, 'wb').close() # Creates a new one or overwrite the old one
+    open(config.CSV_RETRY_FILENAME, 'w').close() # Creates a new one or overwrite the old one
 
     if not os.path.exists(config.STATS_FILE):
-        open(config.STATS_FILE, 'wb').close()
+        open(config.STATS_FILE, 'w').close()
 
     try:
         action, html_path, csv_path, subject = sys_args
@@ -271,7 +271,7 @@ def main(sys_args):
     pymailer = PyMailer(html_path, csv_path, subject)
     
     if action == '-s':
-        if raw_input("You are about to send to %s recipients. Do you want to continue (yes/no)? " % pymailer.count_recipients()) == 'yes':
+        if input("You are about to send to %s recipients. Do you want to continue (yes/no)? " % pymailer.count_recipients()) == 'yes':
             # save the csv file used to the stats file
             pymailer._stats("CSV USED: %s" % csv_path)
 
@@ -283,7 +283,7 @@ def main(sys_args):
             sys.exit()
 
     elif action == '-t':
-        if raw_input("You are about to send a test mail to all recipients as specified in config.py. Do you want to continue (yes/no)? ") == 'yes':
+        if input("You are about to send a test mail to all recipients as specified in config.py. Do you want to continue (yes/no)? ") == 'yes':
             pymailer.send_test()
         else:
             print("Aborted.")
