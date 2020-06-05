@@ -13,7 +13,7 @@ f.write('<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR
 
 #print(f.name + ' created')
 
-arg = ['-s', f.name, '/home/romain/git/python-mailer/recipients.csv', 'Computer Turned On']
+arg = ['-s', f.name, '~/python-mailer/recipients.csv', 'Computer Turned On']
 
 f.write((time.strftime("%A %d %B %Y, %H:%M:%S")))
 f.write('.</p>\
